@@ -1,0 +1,21 @@
+name: campfireclaims
+version: $version
+api-version: 1.21.5
+
+author: Strokkur24
+website: https://github.com/Everift/campfireclaims
+description: A custom-made claims plugin for Everift centered around campfires.
+
+main: net.strokkur.campfireclaims.CampfireClaimsPlugin
+
+permissions:
+  campfireclaims.command.use:
+    default: true
+    description: Permission for /claim
+
+dependencies:
+  server:
+    LuckPerms:
+      load: BEFORE
+      required: true
+      join-classpath: true

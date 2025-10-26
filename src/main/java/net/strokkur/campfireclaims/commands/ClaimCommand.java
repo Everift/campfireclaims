@@ -19,9 +19,11 @@ package net.strokkur.campfireclaims.commands;
 
 import net.strokkur.campfireclaims.CampfireClaimsPlugin;
 import net.strokkur.commands.Command;
+import net.strokkur.commands.paper.Aliases;
 import net.strokkur.commands.paper.Permission;
 
 @Command("claim")
+@Aliases("campfireclaims")
 @Permission("campfireclaims.command.use")
 class ClaimCommand {
   private final CampfireClaimsPlugin plugin;

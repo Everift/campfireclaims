@@ -44,5 +44,16 @@ dependencies {
 tasks {
   runServer {
     minecraftVersion(libs.versions.minecraft.get())
+    jvmArgs("-Xmx2G", "-Xms2G", "-Dcom.mojang.eula.agree=true")
+    downloadPlugins {
+      modrinth("luckperms", "v5.5.17-bukkit")
+    }
+  }
+
+  processResources {
+    val version = project.version;
+    filesMatching("paper-plugin.yml") {
+      expand("version" to version)
+    }
   }
 }
