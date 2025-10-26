@@ -1,0 +1,18 @@
+[versions]
+blossom = "2.2.0"
+spotless = "4.0.0"
+run-paper = "3.0.2"
+
+minecraft = "1.21.10"
+paper = "1.21.5-R0.1-SNAPSHOT"
+commands = "2.0.0-SNAPSHOT"
+
+[libraries]
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
+commands-annotations = { module = "net.strokkur.commands:annotations-paper", version.ref = "commands" }
+commands-processor = { module = "net.strokkur.commands:processor-paper", version.ref = "commands" }
+
+[plugins]
+blossom = { id = "net.kyori.blossom", version.ref = "blossom" }
+spotless = { id = "net.kyori.indra.licenser.spotless", version.ref = "spotless" }
+run-paper = { id = "xyz.jpenilla.run-paper", version.ref = "run-paper" }
