@@ -1,0 +1,8 @@
+package net.strokkur.campfireclaims;
+
+class BuildConstants {
+  static final String VERSION_MARIADB = "{{ mariadb }}";
+  static final String VERSION_CONFIGURATE = "{{ configurate }}";
+  static final String VERSION_HIKARICP = "{{ hikaricp }}";
+  static final String VERSION_CAFFEINE = "{{ caffeine }}";
+}

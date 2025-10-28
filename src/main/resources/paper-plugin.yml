@@ -7,6 +7,7 @@ website: https://github.com/Everift/campfireclaims
 description: A custom-made claims plugin for Everift centered around campfires.
 
 main: net.strokkur.campfireclaims.CampfireClaimsPlugin
+loader: net.strokkur.campfireclaims.CampfireClaimsLoader
 
 permissions:
   campfireclaims.command.use:

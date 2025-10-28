@@ -15,6 +15,7 @@ java {
 
 spotless {
   java {
+    leadingTabsToSpaces(2)
     removeUnusedImports()
     forbidWildcardImports()
   }
@@ -30,15 +31,33 @@ repositories {
   maven("https://repo.papermc.io/repository/maven-public/")
   maven("https://eldonexus.de/repository/maven-releases/")
   maven("https://eldonexus.de/repository/maven-snapshots/")
+  maven("https://eldonexus.de/repository/maven-public/")
 }
 
 dependencies {
   // this is a brigadier instance with a module-info.java
   compileOnly("net.strokkur:brigadier:1.4.0")
-
   compileOnly(libs.paper.api)
+
+  implementation(libs.mariadb.client)
+  implementation(libs.caffeine)
+  implementation(libs.hikaricp)
+  implementation(libs.configurate.hocon)
+
   compileOnly(libs.commands.annotations)
   annotationProcessor(libs.commands.processor)
+
+  compileOnly(libs.config.annotations)
+  annotationProcessor(libs.config.processor)
+}
+
+sourceSets.main {
+  blossom.javaSources {
+    property("mariadb", libs.versions.mariadb)
+    property("configurate", libs.versions.configurate)
+    property("hikaricp", libs.versions.hikaricp)
+    property("caffeine", libs.versions.caffeine)
+  }
 }
 
 tasks {

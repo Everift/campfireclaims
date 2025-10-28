@@ -6,11 +6,22 @@ run-paper = "3.0.2"
 minecraft = "1.21.10"
 paper = "1.21.5-R0.1-SNAPSHOT"
 commands = "2.0.0-SNAPSHOT"
+configurate = "4.2.0"
+config = "1.1.0"
+mariadb = "3.5.6"
+hikaricp = "7.0.2"
+caffeine = "3.2.3"
 
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
 commands-annotations = { module = "net.strokkur.commands:annotations-paper", version.ref = "commands" }
 commands-processor = { module = "net.strokkur.commands:processor-paper", version.ref = "commands" }
+config-annotations = { module = "net.strokkur.config:annotations", version.ref = "config" }
+config-processor = { module = "net.strokkur.config:processor", version.ref = "config" }
+configurate-hocon = { module = "org.spongepowered:configurate-hocon", version.ref = "configurate" }
+mariadb-client = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mariadb" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 
 [plugins]
 blossom = { id = "net.kyori.blossom", version.ref = "blossom" }

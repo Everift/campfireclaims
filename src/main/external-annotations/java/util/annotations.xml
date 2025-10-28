@@ -1,0 +1,5 @@
+<root>
+    <item name='java.util.Map V put(K, V) 1'>
+        <annotation name='org.jetbrains.annotations.Nullable'/>
+    </item>
+</root>

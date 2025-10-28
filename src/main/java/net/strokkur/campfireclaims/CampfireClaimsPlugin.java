@@ -23,7 +23,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 @SuppressWarnings("UnstableApiUsage")
 public class CampfireClaimsPlugin extends JavaPlugin {
-
   @Override
   public void onEnable() {
     this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS.newHandler(
