@@ -17,6 +17,7 @@ module net.strokkur.campfireclaims {
   requires java.sql;
   requires org.mariadb.jdbc;
   requires com.github.benmanes.caffeine;
-  requires net.strokkur.campfireclaims;
   requires org.slf4j;
+  requires com.google.common;
+  requires net.kyori.adventure;
 }

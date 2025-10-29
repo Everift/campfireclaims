@@ -1,7 +1,6 @@
 package net.strokkur.campfireclaims.data.mariadb;
 
 import net.strokkur.campfireclaims.data.CampfireBlock;
-import net.strokkur.campfireclaims.data.CampfireUser;
 import org.bukkit.World;
 import org.jspecify.annotations.Nullable;
 

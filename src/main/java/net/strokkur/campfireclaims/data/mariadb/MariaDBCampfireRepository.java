@@ -2,6 +2,8 @@ package net.strokkur.campfireclaims.data.mariadb;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.pool.HikariPool;
 import net.strokkur.campfireclaims.config.Config;
@@ -20,7 +22,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
+import java.sql.Statement;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +47,7 @@ public class MariaDBCampfireRepository implements CampfireRepository {
       })
       .build();
   private final Map<Integer, CampfireBlock> loadedBlocks = new WeakHashMap<>();
-  private final Map<Integer, World> loadedWorlds = new HashMap<>();
+  private final BiMap<Integer, World> loadedWorlds = HashBiMap.create();
 
   public MariaDBCampfireRepository(final Config config) throws SQLException {
     final MariaDbDataSource dataSource = new MariaDbDataSource();
@@ -63,34 +65,39 @@ public class MariaDBCampfireRepository implements CampfireRepository {
 
     // Init tables
     try (final Connection conn = this.pool.getConnection()) {
-      conn.createStatement().execute("""
+      final Statement statement = conn.createStatement();
+
+      statement.addBatch("""
           CREATE TABLE IF NOT EXISTS campfireclaims_users(
-              user_id INT PRIMARY KEY AUTO_INCRTEMENT UNIQUE NOT NULL,
+              user_id INT PRIMARY KEY AUTO_INCREMENT NOT NULL,
               user_name VARCHAR(16) NOT NULL,
               user_uuid UUID NOT NULL UNIQUE
-          );
-          
+          );""");
+      statement.addBatch("""
           CREATE TABLE IF NOT EXISTS campfireclaims_blocks(
-              block_id INT PRIMARY KEY AUTO_INCREMENT UNIQUE NOT NULL,
+              block_id INT PRIMARY KEY AUTO_INCREMENT NOT NULL,
               owner_id INT NOT NULL,
               placement_timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
               world_id INT NOT NULL,
               pos_x INT NOT NULL,
               pos_y INT NOT NULL,
               pos_z INT NOT NULL,
-              claim_level INT NOT NULL
-          );
-          
+              claim_level INT NOT NULL,
+              active BIT NOT NULL DEFAULT TRUE
+          );""");
+      statement.addBatch("""
           CREATE TABLE IF NOT EXISTS campfireclaims_worlds(
-              world_id INT PRIMARY KEY AUTO_INCREMENT UNIQUE NOT NULL,
+              world_id INT PRIMARY KEY AUTO_INCREMENT NOT NULL,
               world_uuid UUID NOT NULL
-          );
-          
-          CREATE TABLE IF NOT EXISTS campfireclaims_trusted(
+          );""");
+      statement.addBatch("""
+              CREATE TABLE IF NOT EXISTS campfireclaims_trusted(
+              trust_id INT PRIMARY KEY AUTO_INCREMENT NOT NULL,
               user_id INT NOT NULL,
-              block_id INT NOT NULL
-          );"""
-      );
+              block_id INT NOT NULL,
+              active BIT NOT NULL DEFAULT TRUE
+          );""");
+      statement.executeBatch();
     }
   }
 
@@ -165,12 +172,12 @@ public class MariaDBCampfireRepository implements CampfireRepository {
   }
 
   private List<CampfireBlock> getOwnedBlocks(final Connection conn, final int user) throws SQLException {
-    final PreparedStatement prepared = conn.prepareStatement("SELECT (block_id) FROM campfireclaims_trusted WHERE user_id = ?");
+    final PreparedStatement prepared = conn.prepareStatement("SELECT (block_id) FROM campfireclaims_trusted WHERE user_id = ? AND active = TRUE");
     return getCampfireBlocksFromSet(conn, user, prepared);
   }
 
   private List<CampfireBlock> getTrustedBlocks(final Connection conn, final int user) throws SQLException {
-    final PreparedStatement prepared = conn.prepareStatement("SELECT (block_id) FROM campfireclaims_blocks WHERE owner_id = ?");
+    final PreparedStatement prepared = conn.prepareStatement("SELECT (block_id) FROM campfireclaims_blocks WHERE owner_id = ? AND active = TRUE");
     return getCampfireBlocksFromSet(conn, user, prepared);
   }
 
@@ -244,17 +251,114 @@ public class MariaDBCampfireRepository implements CampfireRepository {
   }
 
   @Override
-  public CampfireBlock createBlock(final Location blockPosition, final CampfireUser owner) {
+  public CampfireBlock createBlock(final Location blockPosition, final CampfireUser owner) throws SQLException {
+    try (final Connection conn = this.pool.getConnection()) {
+      final int worldId = getOrInsertWorld(conn, blockPosition.getWorld());
 
+      final PreparedStatement prepared = conn.prepareStatement("""
+              INSERT INTO campfireclaims_blocks (owner_id, world_id, pos_x, pos_y, pos_z, claim_level)
+              VALUES (?, ?, ?, ?, ?, ?);""",
+          PreparedStatement.RETURN_GENERATED_KEYS
+      );
+      prepared.setInt(1, owner.id());
+      prepared.setInt(2, worldId);
+      prepared.setInt(3, blockPosition.getBlockX());
+      prepared.setInt(4, blockPosition.getBlockY());
+      prepared.setInt(5, blockPosition.getBlockZ());
+      prepared.setInt(6, 1);
+
+      prepared.executeUpdate();
+      final ResultSet insertResult = prepared.getResultSet();
+      if (insertResult.next()) {
+        final CampfireBlock out = new CampfireBlockImpl(
+            insertResult.getInt("block_id"),
+            owner.id(),
+            insertResult.getTimestamp("placement_timestamp").toInstant(),
+            blockPosition.getBlockX(),
+            blockPosition.getBlockY(),
+            blockPosition.getBlockZ(),
+            blockPosition.getWorld(),
+            1
+        );
+        ((CampfireUserImpl) owner).owned().add(out);
+        return out;
+      }
+
+      throw new SQLException("Failed to create new campfire block for (%s x=%s y=%s z=%s)".formatted(
+          blockPosition.getWorld().getName(), blockPosition.getBlockX(), blockPosition.getBlockY(), blockPosition.getBlockZ()
+      ));
+    }
+  }
+
+  private int getOrInsertWorld(final Connection conn, final World world) throws SQLException {
+    final Integer cached = this.loadedWorlds.inverse().get(world);
+    if (cached != null) {
+      return cached;
+    }
+
+    final PreparedStatement preparedStatement = conn.prepareStatement("SELECT (world_id) FROM campfireclaims_worlds WHERE world_uuid = ?;");
+    preparedStatement.setObject(1, world.getUID());
+    final ResultSet set = preparedStatement.executeQuery();
+    if (set.next()) {
+      return set.getInt("world_id");
+    }
+
+    final PreparedStatement insertStatement = conn.prepareStatement("INSERT INTO campfireclaims_world (world_uuid) VALUES (?);", PreparedStatement.RETURN_GENERATED_KEYS);
+    insertStatement.setObject(1, world.getUID());
+    insertStatement.executeUpdate();
+    final ResultSet insertSet = insertStatement.getResultSet();
+    if (!insertSet.next()) {
+      throw new IllegalStateException("Failed to insert world '" + world.getUID() + "'");
+    }
+    return insertSet.getInt("world_id");
   }
 
   @Override
   public void saveBlock(final CampfireBlock block) throws SQLException {
-
+    try (final Connection conn = this.pool.getConnection()) {
+      final PreparedStatement prepared = conn.prepareStatement("UPDATE campfireclaims_blocks SET claim_level = ? WHERE block_id = ?;");
+      prepared.setInt(1, block.level());
+      prepared.setInt(2, block.id());
+      prepared.executeUpdate();
+    }
   }
 
   @Override
-  public void removeBlock(final CampfireBlock block) throws SQLException {
+  public void removeBlock(final CampfireUser owner, final CampfireBlock block) throws SQLException {
+    try (final Connection conn = this.pool.getConnection()) {
+      final PreparedStatement blocksStatement = conn.prepareStatement("UPDATE campfireclaims_blocks SET active = FALSE WHERE block_id = ?;");
+      blocksStatement.setInt(1, block.id());
+      blocksStatement.executeUpdate();
+      ((CampfireUserImpl) owner).owned().remove(block);
 
+      final PreparedStatement trustedStatement = conn.prepareStatement("UPDATE campfireclaims_trusted SET active = FALSE WHERE block_id = ?;");
+      trustedStatement.setInt(1, block.id());
+      trustedStatement.executeUpdate();
+      for (final CampfireUser user : this.userCache.asMap().values()) {
+        ((CampfireUserImpl) user).trusted().removeIf(b -> b.id() == block.id());
+      }
+    }
+  }
+
+  @Override
+  public void addTrusted(final CampfireBlock block, final CampfireUser user) throws SQLException {
+    try (final Connection conn = this.pool.getConnection()) {
+      final PreparedStatement insertStatement = conn.prepareStatement("""
+          INSERT INTO campfireclaims_trusted (user_id, block_id)
+          VALUES (?, ?)""");
+      insertStatement.setInt(1, user.id());
+      insertStatement.setInt(2, block.id());
+      insertStatement.executeUpdate();
+      ((CampfireUserImpl) user).trusted().add(block);
+    }
+  }
+
+  @Override
+  public void removeTrusted(final CampfireBlock block, final CampfireUser user) throws SQLException {
+    try (final Connection conn = this.pool.getConnection()) {
+      final PreparedStatement statement = conn.prepareStatement("UPDATE campfireclaims_trusted SET active = FALSE WHERE block_id = ?;");
+      statement.setInt(1, block.id());
+      ((CampfireUserImpl) user).trusted().removeIf(b -> b.id() == block.id());
+    }
   }
 }

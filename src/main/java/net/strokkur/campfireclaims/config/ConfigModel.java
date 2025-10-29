@@ -13,7 +13,7 @@ import org.spongepowered.configurate.objectmapping.meta.Comment;
 class ConfigModel {
 
   @Comment("The database connection information. This is required for the plugin to run.")
-  Database database;
+  Database database = new Database();
 
   @ConfigSerializable
   static class Database {

@@ -12,7 +12,8 @@ public class CampfireClaimsLoader implements PluginLoader {
   @Override
   public void classloader(final PluginClasspathBuilder builder) {
     final MavenLibraryResolver resolver = new MavenLibraryResolver();
-    resolver.addRepository(new RemoteRepository.Builder(null, null, "https://maven-central.storage-download.googleapis.com/maven2").build());
+    resolver.addRepository(new RemoteRepository.Builder("paper", "default", "https://repo.papermc.io/repository/maven-public/").build());
+    resolver.addRepository(new RemoteRepository.Builder("google-mirror", "default", "https://maven-central.storage-download.googleapis.com/maven2").build());
     resolver.addDependency(new Dependency(new DefaultArtifact("org.mariadb.jdbc:mariadb-java-client:" + BuildConstants.VERSION_MARIADB), null));
     resolver.addDependency(new Dependency(new DefaultArtifact("com.zaxxer:HikariCP:" + BuildConstants.VERSION_HIKARICP), null));
     resolver.addDependency(new Dependency(new DefaultArtifact("com.github.ben-manes.caffeine:caffeine:" + BuildConstants.VERSION_CAFFEINE), null));

@@ -11,9 +11,13 @@ public interface CampfireRepository {
 
   CampfireUser getUser(UUID uuid) throws SQLException;
 
-  CampfireBlock createBlock(Location blockPosition, CampfireUser owner);
+  CampfireBlock createBlock(Location blockPosition, CampfireUser owner) throws SQLException;
 
-  void removeBlock(CampfireBlock block) throws SQLException;
+  void removeBlock(final CampfireUser owner, CampfireBlock block) throws SQLException;
 
   void saveBlock(CampfireBlock block) throws SQLException;
+
+  void addTrusted(CampfireBlock block, CampfireUser user) throws SQLException;
+
+  void removeTrusted(CampfireBlock block, CampfireUser user) throws SQLException;
 }
